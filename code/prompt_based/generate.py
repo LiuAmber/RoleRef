@@ -1,5 +1,9 @@
 import sys
-sys.path.append('/apdcephfs_cq10/share_2992827/siyuan/leoleoliu/research/code/roleplay_refuse_answer/code')
+from pathlib import Path
+import os
+current_dir = Path(__file__).parent
+code_dir = current_dir / "code"  # Adjust relative path as needed
+sys.path.append(str(code_dir))
 import torch
 import transformers
 from transformers import AutoModelForCausalLM, AutoTokenizer
@@ -63,13 +67,16 @@ def generate_response(
 
     tokenizer = AutoTokenizer.from_pretrained(model_path, use_fast=False, trust_remote_code=True)
     model = AutoModelForCausalLM.from_pretrained(model_path, device_map="auto", trust_remote_code=True)   
-    if "3.1-8B" in model_path:
-        start = 8
-    elif "qwen" in model_path:
-        start = 7
-    else:
-        start = 0
-    for role in tqdm(list(dataset.keys())[start:]):
+    # if "3.1-8B" in model_path:
+    #     start = 8
+    # elif "qwen" in model_path:
+    #     start = 7
+    # else:
+    #     start = 0
+    for role in tqdm(list(dataset.keys())):
+        if role != "Gandalf":
+            continue
+         
         for key in tqdm(dataset[role]):
             role_response = {
                 role:{}
@@ -109,10 +116,10 @@ def generate_response(
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Generate response using specified model and data.")
-    parser.add_argument('--model_path', type=str, required=True, help='Path to the model')
-    parser.add_argument('--data_path', type=str, required=True, help='Path to the data')
-    parser.add_argument('--save_path', type=str, required=True, help='Path to save the generated response')
-    parser.add_argument('--query_type', type=str, required=True, help='Type of query')
+    parser.add_argument('--model_path', type=str, default="Qwen/Qwen2.5-7B-Instruct", help='Path to the model')
+    parser.add_argument('--data_path', type=str, default="../../data/test.json", help='Path to the data')
+    parser.add_argument('--save_path', type=str, default="../../data/generate/qwen_baseline/", help='Path to save the generated response')
+    parser.add_argument('--query_type', type=str, default="direct", help='Type of query')
 
     args = parser.parse_args()
 

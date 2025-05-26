@@ -1,5 +1,9 @@
 import sys
-sys.path.append('/apdcephfs_cq10/share_2992827/siyuan/leoleoliu/research/code/roleplay_refuse_answer/code')
+import os
+from pathlib import Path
+current_dir = Path(__file__).parent
+code_dir = current_dir / "code"  # Adjust relative path as needed
+sys.path.append(str(code_dir))
 import torch
 import rep_control_reading_vec
 import transformers
@@ -57,15 +61,18 @@ def get_response(model, tokenizer, prompt):
 def wrap_model(model,tokenizer,
                ceoff=0.1,
                layer_ids=list(range(0,32)),
-               safe_pattern_path="/apdcephfs_cq10/share_2992827/siyuan/leoleoliu/research/code/reject_answer/code/one_stage/representation/data/roleplay_test_activation/common_diff_rep_half_roleplay.pt"
+               safe_pattern_path=""
                ):
-    # layer_ids = 
-    warpped_model = rep_control_reading_vec.WrappedReadingVecModel(model,tokenizer)
+    if not isinstance(model, rep_control_reading_vec.WrappedReadingVecModel):
+        warpped_model = rep_control_reading_vec.WrappedReadingVecModel(model,tokenizer)
+    else:
+        warpped_model = model
     warpped_model.reset()
     warpped_model.wrap_block(
         layer_ids=layer_ids,
         block_name="decoder_block"
     )
+    logger.info(safe_pattern_path)
     with open(safe_pattern_path,"rb") as f:
         safe_pattern = pickle.load(f)
     safe_pattern = torch.stack(safe_pattern).to(dtype=torch.float32)
@@ -90,19 +97,22 @@ def generate_response(
     data_path:str = "",
     save_path:str = "",
     query_type: str = "direct",
-    layer_ids:list = [0,32],
+    # layer_ids:list = [0,32],
     ceoff:float = -0.1,
-    safe_pattern_path:str = "/apdcephfs_cq10/share_2992827/siyuan/leoleoliu/research/code/reject_answer/code/one_stage/representation/data/roleplay/{role}/rep_diff_half.pkl",
+    safe_pattern_path:str = "../../data/qwen/{role}/rep_diff_half.pkl",
     ):
-    if "qwen" in model_path:
-        layer_ids[1] = 28
+    
     dataset = load_dataset(data_path)
 
     tokenizer = AutoTokenizer.from_pretrained(model_path, use_fast=False, trust_remote_code=True)
 
     start = 0
+    model = AutoModelForCausalLM.from_pretrained(model_path, device_map="auto", trust_remote_code=True) 
+    layer_ids = [0,model.config.num_hidden_layers] 
     for role in tqdm(list(dataset.keys())[start:]):
-        model = AutoModelForCausalLM.from_pretrained(model_path, device_map="auto", trust_remote_code=True)   
+        if role != "Gandalf":
+            continue
+         
         safe_pattern_path = safe_pattern_path.format(role=role)
         model= wrap_model(
                     model,
@@ -146,19 +156,18 @@ def generate_response(
             role_save_path = save_path + f"/{role}_{key}.json"
             with open(role_save_path,"w",encoding="utf-8") as f:
                 json.dump(role_response,f,indent=4,ensure_ascii=False)
-        del model
         # break
             
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Generate response using specified model and data.")
-    parser.add_argument('--model_path', type=str, required=True, help='Path to the model')
-    parser.add_argument('--data_path', type=str, required=True, help='Path to the data')
-    parser.add_argument('--save_path', type=str, required=True, help='Path to save the generated response')
-    parser.add_argument('--query_type', type=str, required=True, help='Type of query')
-    parser.add_argument('--layer_ids', type=list,default=[0,32], help='Type of query')
+    parser.add_argument('--model_path', type=str, default="/mnt/nj-1/dataset/liuwenhao/model/Qwen/Qwen2.5-7B-Instruct", help='Path to the model')
+    parser.add_argument('--data_path', type=str, default="../../data/test.json", help='Path to the data')
+    parser.add_argument('--save_path', type=str, default="../../data/generate/representation/qwen_test", help='Path to save the generated response')
+    parser.add_argument('--query_type', type=str, default="direct", help='Type of query')
+    # parser.add_argument('--layer_ids', type=list,default=[0,32], help='Type of query')
     parser.add_argument('--ceoff', type=float,default=-0.1, help='Type of query')
-    parser.add_argument('--safe_pattern_path', type=str, required=True, help='Type of query')
+    parser.add_argument('--safe_pattern_path', type=str, default="../../data/qwen-7b-test/{role}/rep_diff_half.pkl", help='Type of query')
     
     args = parser.parse_args()
 
@@ -167,7 +176,7 @@ if __name__ == "__main__":
         data_path=args.data_path,
         save_path=args.save_path,
         query_type=args.query_type,
-        layer_ids=args.layer_ids,
-        ceoff=args.ceoff,
+        # layer_ids=args.layer_ids,
+        ceoff=float(args.ceoff),
         safe_pattern_path=args.safe_pattern_path
     )

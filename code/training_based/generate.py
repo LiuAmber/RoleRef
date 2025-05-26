@@ -1,15 +1,26 @@
 import sys
-sys.path.append('/apdcephfs_cq10/share_2992827/siyuan/leoleoliu/research/code/roleplay_refuse_answer/code')
+import os
+from pathlib import Path
+
+# Dynamically add the code directory to Python path
+current_dir = Path(__file__).parent
+code_dir = current_dir / "code"  # Adjust relative path as needed
+sys.path.append(str(code_dir))
+
+# Standard library imports
+import json
+import argparse
+import logging
+
+# Third-party imports
 import torch
 import transformers
 from peft import AutoPeftModelForCausalLM
 from transformers import AutoModelForCausalLM, AutoTokenizer
-import json
 from tqdm import tqdm
-from prompt import QUERY_TEMPLATE,PROFILE,SIGNAL_QUERY_TEMPLATE
-import os
-import argparse
-import logging
+
+# Local imports
+from prompt import QUERY_TEMPLATE, PROFILE, SIGNAL_QUERY_TEMPLATE
 
 # 配置日志记录器
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
