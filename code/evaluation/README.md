@@ -112,11 +112,11 @@ python3 get_evaluation_result.py -i results.json -o output_dir/
 
 ## 📂 Data Types
 
-- **answerable** - Normal questions that can be answered
-- **fake** - Questions with false information  
-- **context_conflict** - Questions with conflicting context
-- **out_series** - Questions outside character's universe
-- **absent** - Questions about missing information
+- **answerable** - Non-conflict Querys
+- **fake** - Factual Knowledge Conflict Querys
+- **context_conflict** - Role Profile Conflict Querys
+- **out_series** - Role Setting Conflict Querys
+- **absent** - Absent Knowledge Conflict Querys
 
 ## 🔄 Complete Workflow
 
